@@ -9,6 +9,8 @@ from torchcrf import CRF
 
 
 class BILSTM_CRF(nn.Module):
+    """ 实体识别模型 BILstm_Crf 代码实现"""
+
     def __init__(self, vocab_size, embedding_size, hidden_size, num_layers, num_classes, dropout):
         super(BILSTM_CRF, self).__init__()
         self.embedding = nn.Embedding(vocab_size, embedding_size, padding_idx=0)
@@ -34,8 +36,3 @@ class BILSTM_CRF(nn.Module):
         else:
             loss = -1 * self.crf(logits, y, mask)
             return loss
-
-
-if __name__ == '__main__':
-    bilstm_crf = BILSTM_CRF(10000, 200, 100, 2, 8, 0.2)
-    print(bilstm_crf)
