@@ -90,7 +90,7 @@ def run():
                   format(epoch + 1, args.epochs, precision.item(), recall.item(), f1_score.item()))
 
             if f1_score > best_f1_score:
-                torch.save(model.state_dict(), 'bilstm_ner.pt')
+                torch.save(model.state_dict(), os.path.join(args.file_path, 'bilstm_ner.pt'))
                 best_f1_score = f1_score
                 early_epochs = 0
             else:
