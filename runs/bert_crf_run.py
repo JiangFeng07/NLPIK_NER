@@ -55,7 +55,7 @@ def train():
         model.train()
         with tqdm(total=len(train_loader), desc='模型训练进度条') as pbar:
             for batch_idx, batch in enumerate(train_loader):
-                input_ids, token_type_ids, attention_mask, labels, _, _ = batch
+                input_ids, token_type_ids, attention_mask, labels, _, _, _ = batch
                 optimizer.zero_grad()
                 loss = model(input_ids, token_type_ids, attention_mask, labels)
                 pbar.set_postfix({'loss': '{0:1.5f}'.format(float(loss))})

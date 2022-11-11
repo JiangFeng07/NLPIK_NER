@@ -2,6 +2,7 @@
 # -*- coding:utf-8 -*-
 # @Time  : 2022/11/3 13:32
 # @Author: lionel
+import json
 import os.path
 
 from torch.nn.utils.rnn import pad_sequence
@@ -45,7 +46,7 @@ def train():
     train_dataset = MsraNerDataset(os.path.join(args.file_path, 'train.json'), max_len=500)
     valid_dataset = MsraNerDataset(os.path.join(args.file_path, 'dev.json'), max_len=500)
     vocab2id, id2vocab = build_vocab(os.path.join(args.file_path, 'vocab.txt'))
-    label2id = {'O': 0, 'B-PER': 1, 'I-PER': 2, 'B-ORG': 3, 'I-ORG': 4, 'B-LOC': 5, 'I-LOC': 6}
+    label2id = json.load(open(os.path.join(args.file_path, 'tag.json'), 'r', encoding='utf-8'))
     id2label = {val: key for key, val in label2id.items()}
     train_loader = data.DataLoader(train_dataset, shuffle=True, batch_size=args.batch_size,
                                    collate_fn=lambda ele: collate_fn(ele, vocab2id, label2id))
@@ -54,6 +55,8 @@ def train():
 
     model = BILSTM_CRF(vocab_size=len(vocab2id), embedding_size=args.embedding_size, hidden_size=args.hidden_size,
                        num_layers=args.num_layers, num_classes=len(label2id), dropout=args.dropout).to(device)
+
+    print(model)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -88,7 +91,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--file_path', help='训练数据路径', type=str, default='/tmp/MSRA_NER')
+    parser.add_argument('--file_path', help='训练数据路径', type=str, default='/tmp/')
     parser.add_argument('--epochs', help='训练轮数', type=int, default=1)
     parser.add_argument('--dropout', help='', type=float, default=0.5)
     parser.add_argument('--embedding_size', help='', type=int, default=100)

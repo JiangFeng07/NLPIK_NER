@@ -24,8 +24,8 @@ class PreTrainModelEncoder(nn.Module):
     def __init__(self, encoder):
         super(PreTrainModelEncoder, self).__init__()
         self.encoder = encoder
+        self.hidden_size = encoder.config.hidden_size
 
     def forward(self, token_ids, token_type_ids, attention_mask):
         outputs = self.encoder(input_ids=token_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)
         return outputs
-
