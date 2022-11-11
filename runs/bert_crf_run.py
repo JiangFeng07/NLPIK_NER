@@ -40,7 +40,7 @@ def train():
     num_labels = len(label2id)
     train_data = MsraNerDataset(file_path=os.path.join(args.file_path, 'train.json'), max_len=100)
     valid_data = MsraNerDataset(file_path=os.path.join(args.file_path, 'dev.json'), max_len=100)
-    train_loader = data.DataLoader(train_data, batch_size=16, shuffle=False,
+    train_loader = data.DataLoader(train_data, batch_size=16, shuffle=True,
                                    collate_fn=lambda ele: collate_fn(ele, vocab2id, label2id))
     valid_loader = data.DataLoader(valid_data, batch_size=10,
                                    collate_fn=lambda ele: collate_fn(ele, vocab2id, label2id))
