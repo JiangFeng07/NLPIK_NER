@@ -2,12 +2,9 @@
 # -*- coding:utf-8 -*-
 # @Time  : 2022/11/10 17:01
 # @Author: lionel
-import json
 
-import pandas as pd
 import torch
 from tqdm import tqdm
-from transformers import BertModel
 
 
 # 参考文档 https://wmathor.com/index.php/archives/1537/
@@ -18,7 +15,7 @@ class FGM(object):
         self.backup = {}
 
     def attack(self, epsilon=1., emb_name='emb'):
-        for name, param in bert_model.named_parameters():
+        for name, param in self.model.named_parameters():
             if param.required_grad and emb_name in name:
                 self.backup[name] = param.data.clone()
                 norm = torch.norm(param.grad)  # 默认2范数, g/|g|
@@ -27,7 +24,7 @@ class FGM(object):
                     param.data.add_(r_at)
 
     def restore(self, emb_name='emb'):
-        for name, param in bert_model.named_parameters():
+        for name, param in self.model.named_parameters():
             if param.required_grad and emb_name in name:
                 assert name in self.backup
                 param.data = self.backup[name]
