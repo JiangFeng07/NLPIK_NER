@@ -5,7 +5,6 @@
 import torch
 from torch import nn
 from torchcrf import CRF
-from transformers import BertModel
 
 
 class Bert_CRF(nn.Module):
