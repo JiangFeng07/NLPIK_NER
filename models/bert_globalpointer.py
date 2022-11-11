@@ -6,18 +6,20 @@ import math
 
 import torch
 from torch import nn
-from transformers import BertModel
+
+from models.models import PreTrainModelEncoder
 
 
+# https://kexue.fm/archives/8373
 class Bert_GlobalPointer(nn.Module):
-    def __init__(self, bert_model_path, heads, head_size, hidden_size=768, tril_mask=True, RoPE=True, device='cpu'):
+    def __init__(self, encoder, heads, head_size, tril_mask=True, RoPE=True, device='cpu'):
         super(Bert_GlobalPointer, self).__init__()
         self.heads = heads
         self.tril_mask = tril_mask
         self.head_size = head_size
         self.RoPE = RoPE
-        self.bert_model = BertModel.from_pretrained(bert_model_path)
-        self.fc1 = nn.Linear(hidden_size, head_size * heads * 2)
+        self.encoder = PreTrainModelEncoder(encoder)
+        self.fc1 = nn.Linear(self.encoder.hidden_size, head_size * heads * 2)
         self.device = device
 
     def sinusoidal_position_embedding(self, batch_size, seq_len, output_dim):
@@ -31,9 +33,8 @@ class Bert_GlobalPointer(nn.Module):
         embeddings = embeddings.to(self.device)
         return embeddings
 
-    def forward(self, input_ids, token_type_ids, attention_mask):
-        bert_outputs = self.bert_model(input_ids=input_ids, token_type_ids=token_type_ids,
-                                       attention_mask=attention_mask)
+    def forward(self, token_ids, token_type_ids, attention_mask):
+        bert_outputs = self.encoder(token_ids, token_type_ids, attention_mask)
         x = bert_outputs[0]  # [batch_size, seq_len, 768]
         batch_size, seq_len, hidden_size = x.size()
         fc = self.fc1(x)

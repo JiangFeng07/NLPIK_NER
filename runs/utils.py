@@ -161,23 +161,26 @@ def entity_decode(chars, labels, mode='BIO'):
                 continue
             flag, label = labels[i].split('-')
             if flag == 'S':
-                entities[chars[i]] = label
+                _label = {'value': label, 'start': i, 'end': i}
+                entities[chars[i]] = _label
             elif flag == 'B':
                 start = i
             elif flag == 'E':
-                entities[''.join(chars[start:i + 1])] = label
+                _label = {'value': label, 'start': start, 'end': i}
+                entities[''.join(chars[start:i + 1])] = _label
             i += 1
         return entities
     elif mode == 'BIO':
-        tag = ''
+        label = ''
         while i < len(labels):
             if 'B-' in labels[i]:
-                tag = labels[i][2:]
+                label = labels[i][2:]
                 start = i
             elif 'I-' in labels[i]:
                 while i + 1 < len(labels) and 'I-' in labels[i + 1]:
                     i += 1
-                entities[''.join(chars[start:i + 1])] = tag
+                _label = {'value': label, 'start': start, 'end': i}
+                entities[''.join(chars[start:i + 1])] = _label
             i += 1
         return entities
 
@@ -185,10 +188,10 @@ def entity_decode(chars, labels, mode='BIO'):
     return entities
 
 
-def metric(dataloder, model, id2label):
+def metric(dataloader, model, id2label):
     correct_num, predict_num, gold_num = 0, 0, 0
-    with tqdm(total=len(dataloder), desc='模型验证进度条') as pbar:
-        for index, batch in enumerate(dataloder):
+    with tqdm(total=len(dataloader), desc='模型验证进度条') as pbar:
+        for index, batch in enumerate(dataloader):
             token_ids, token_type_ids, attention_mask, _, texts, gold_labels, char_lens = batch
             pred_labels = model(token_ids, token_type_ids, attention_mask, None)
 
@@ -199,9 +202,9 @@ def metric(dataloder, model, id2label):
                 pred_entity_set = set()
                 gold_entity_set = set()
                 for key, val in pred_entities.items():
-                    pred_entity_set.add((key, val))
+                    pred_entity_set.add((key, val['value']))
                 for key, val in gold_entities.items():
-                    gold_entity_set.add((key, val))
+                    gold_entity_set.add((key, val['value']))
                 predict_num += len(pred_entity_set)
                 gold_num += len(gold_entity_set)
                 correct_num += len(pred_entity_set & gold_entity_set)
