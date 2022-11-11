@@ -61,8 +61,8 @@ def train():
                 pbar.set_postfix({'loss': '{0:1.5f}'.format(float(loss))})
                 pbar.update()
                 loss.backward()
-                scheduler.step()
                 optimizer.step()
+                scheduler.step()
 
         model.eval()
         with torch.no_grad():
