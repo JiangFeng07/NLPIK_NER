@@ -16,7 +16,7 @@ class FGM(object):
 
     def attack(self, epsilon=1., emb_name='emb'):
         for name, param in self.model.named_parameters():
-            if param.required_grad and emb_name in name:
+            if param.requires_grad and emb_name in name:
                 self.backup[name] = param.data.clone()
                 norm = torch.norm(param.grad)  # 默认2范数, g/|g|
                 if norm != 0:
@@ -25,7 +25,7 @@ class FGM(object):
 
     def restore(self, emb_name='emb'):
         for name, param in self.model.named_parameters():
-            if param.required_grad and emb_name in name:
+            if param.requires_grad and emb_name in name:
                 assert name in self.backup
                 param.data = self.backup[name]
         self.backup = {}
@@ -58,7 +58,7 @@ class PGD(object):
 
     def attack(self, epsilon=1., alpha=0.3, emb_name='emb', is_first_attack=False):
         for name, param in self.model.named_parameters():
-            if param.required_grad and emb_name in name:
+            if param.requires_grad and emb_name in name:
                 if is_first_attack:
                     self.emb_backup[name] = param.data.clone()
                 norm = torch.norm(param.grad)
@@ -69,7 +69,7 @@ class PGD(object):
 
     def restore(self, emb_name='emb'):
         for name, param in self.model.named_parameters():
-            if param.required_grad and emb_name in name:
+            if param.requires_grad and emb_name in name:
                 assert name in self.emb_backup
                 param.data = self.emb_backup[name]
         self.emb_backup = {}
