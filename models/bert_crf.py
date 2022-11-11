@@ -25,9 +25,10 @@ class Bert_CRF(nn.Module):
         outputs = self.fc(outputs)
         logits = self.softmax(outputs)
         mask = attention_mask == 1
+        mask = mask.type(torch.bool)
         if y is None:
             pred = self.crf.decode(logits, mask)
             return pred
         else:
-            loss = -1 * self.crf(logits, y, mask)
+            loss = -1 * self.crf(logits, y.long(), mask)
             return loss
