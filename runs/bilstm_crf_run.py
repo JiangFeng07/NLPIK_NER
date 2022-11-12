@@ -13,7 +13,7 @@ from datas.utils import build_vocab
 from models.bilstm_crf import BILSTM_CRF
 import torch
 
-from runs.utils import metric
+from models.utils import metric
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

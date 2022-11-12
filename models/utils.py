@@ -241,3 +241,13 @@ if __name__ == '__main__':
               'O', 'O', 'B-LOC', 'I-LOC', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O']
     entities = entity_decode(chars, labels)
     print(entities)
+
+    a = torch.randint(0, 10, size=(3, 4, 5))
+    print(a)
+
+    a, b, c = torch.where(1 == a)
+    print(a)
+    print(b)
+    print(c)
+    for ele in a:
+        print(ele)

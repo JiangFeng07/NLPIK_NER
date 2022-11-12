@@ -9,8 +9,10 @@ from torch import nn
 
 from models.models import PreTrainModelEncoder
 
-
 # https://kexue.fm/archives/8373
+from models.utils import tokenizer
+
+
 class Bert_GlobalPointer(nn.Module):
     def __init__(self, encoder, heads, head_size, tril_mask=True, RoPE=True, device='cpu'):
         super(Bert_GlobalPointer, self).__init__()
@@ -92,3 +94,26 @@ class GlobalPointerLoss(nn.Module):
         neg_loss = torch.logsumexp(y_pred_neg, dim=-1)
         pos_loss = torch.logsumexp(y_pred_pos, dim=-1)
         return torch.mean(neg_loss + pos_loss)
+
+
+class GlobalPointerServer(object):
+    def __init__(self, model_path, encoder, heads, head_size, tril_mask=True, RoPE=True, device='cpu'):
+        self.device = device
+        self.model = Bert_GlobalPointer(encoder, heads, head_size, tril_mask, RoPE, self.device)
+        self.model.load_state_dict(torch.load(model_path, map_location=self.device)).to(self.device)
+
+    def predict(self, texts, vocab2id, id2tag):
+        entities = []
+        token_ids, token_type_ids, attention_mask = tokenizer(texts, vocab2id, self.device)
+        pred_labels = self.model(token_ids, token_type_ids, attention_mask)
+        pred_labels = torch.gt(pred_labels, 0).int()
+        for text, pred_label in zip(texts, pred_labels):
+            entity = {}
+            tag_index, idx1, idx2 = torch.where(pred_label == 1)
+            for idx, tag_id in enumerate(tag_index):
+                tag = id2tag[tag_id]
+                start = idx1[idx]
+                end = idx2[idx]
+                entity[text[start:end + 1]] = tag
+            entities.append(entity)
+        return entities
