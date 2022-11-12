@@ -7,6 +7,8 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 class BilstmEncoder(nn.Module):
+    """ 双向lstm编码"""
+
     def __init__(self, vocab_size, embedding_size, hidden_size, num_layers):
         super(BilstmEncoder, self).__init__()
         self.embedding = nn.Embedding(vocab_size, embedding_size, padding_idx=0)
@@ -21,6 +23,8 @@ class BilstmEncoder(nn.Module):
 
 
 class PreTrainModelEncoder(nn.Module):
+    """预训练模型编码"""
+
     def __init__(self, encoder):
         super(PreTrainModelEncoder, self).__init__()
         self.encoder = encoder

@@ -9,11 +9,12 @@ from torch import nn
 
 from models.models import PreTrainModelEncoder
 
-# https://kexue.fm/archives/8373
 from models.utils import tokenizer
 
 
 class Bert_GlobalPointer(nn.Module):
+    """实体识别模型 Bert_GlobalPointer，参考https://kexue.fm/archives/8373"""
+
     def __init__(self, encoder, heads, head_size, tril_mask=True, RoPE=True, device='cpu'):
         super(Bert_GlobalPointer, self).__init__()
         self.heads = heads

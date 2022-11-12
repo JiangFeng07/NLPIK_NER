@@ -11,6 +11,8 @@ from models.utils import tokenizer, entity_decode
 
 
 class Bert_CRF(nn.Module):
+    """实体识别模型 Bert_Crf"""
+
     def __init__(self, encoder, num_labels, dropout=0.2):
         super(Bert_CRF, self).__init__()
         self.encoder = PreTrainModelEncoder(encoder)

@@ -11,7 +11,7 @@ from models.models import BilstmEncoder
 
 
 class BILSTM_CRF(nn.Module):
-    """ 实体识别模型 BILstm_Crf 代码实现"""
+    """ 实体识别模型 BILstm_Crf"""
 
     def __init__(self, vocab_size, embedding_size, hidden_size, num_layers, num_classes, dropout):
         super(BILSTM_CRF, self).__init__()
