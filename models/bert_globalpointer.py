@@ -100,7 +100,8 @@ class GlobalPointerServer(object):
     def __init__(self, model_path, encoder, heads, head_size, tril_mask=True, RoPE=True, device='cpu'):
         self.device = device
         self.model = Bert_GlobalPointer(encoder, heads, head_size, tril_mask, RoPE, self.device)
-        self.model.load_state_dict(torch.load(model_path, map_location=self.device)).to(self.device)
+        self.model.load_state_dict(torch.load(model_path))
+        self.model.to(self.device)
 
     def predict(self, texts, vocab2id, id2tag):
         entities = []

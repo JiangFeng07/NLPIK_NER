@@ -7,6 +7,7 @@ from torch import nn
 from torchcrf import CRF
 
 from models.models import PreTrainModelEncoder
+from models.utils import tokenizer, entity_decode
 
 
 class Bert_CRF(nn.Module):
@@ -34,3 +35,25 @@ class Bert_CRF(nn.Module):
         else:
             loss = -1 * self.crf(logits, y.long(), mask)
             return loss
+
+
+class BertCrfServer(object):
+    def __init__(self, model_path, encoder, num_labels, device='cpu'):
+        self.device = device
+        self.model = Bert_CRF(encoder, num_labels, dropout=0.0)
+        self.model.load_state_dict(torch.load(model_path))
+        self.model.to(self.device)
+
+    def predict(self, texts, vocab2id, id2label):
+        entities = []
+        token_ids, token_type_ids, attention_mask = tokenizer(texts, vocab2id, self.device)
+        char_lens = [len(text) for text in texts]
+        pred_labels = self.model(token_ids, token_type_ids, attention_mask)
+        for chars, pred_label, char_len in zip(texts, pred_labels, char_lens):
+            entity = {}
+            pred_label = [id2label[_label] for _label in pred_label[:char_len]]
+            pred_entities = entity_decode(chars, pred_label, mode='BIOES')
+            for key, val in pred_entities.items():
+                entity[key] = val['value']
+            entities.append(entity)
+        return entities
