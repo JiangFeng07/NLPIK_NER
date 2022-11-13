@@ -2,6 +2,7 @@
 # -*- coding:utf-8 -*-
 # @Time  : 2022/11/11 13:58
 # @Author: lionel
+import copy
 import math
 
 import torch
@@ -55,6 +56,8 @@ class AbsoluteSinusoidalPositionalEmbedding(object):
 
 
 class DotProductAttention(object):
+    """ 乘法注意力 """
+
     def __init__(self):
         super(DotProductAttention, self).__init__()
 
@@ -77,9 +80,35 @@ class DotProductAttention(object):
         return torch.matmul(p_attn, V), p_attn
 
 
+class MultiHeadedAttention(nn.Module):
+    """多头注意力机制"""
+
+    def __init__(self, heads, d_model):
+        super(MultiHeadedAttention, self).__init__()
+        assert d_model % heads == 0
+        self.heads = heads
+        self.d_model = d_model
+        self.d_k = d_model // heads
+        self.attention = DotProductAttention()
+        self.linears = nn.ModuleList([copy.deepcopy(nn.Linear(d_model, d_model)) for _ in range(4)])
+
+    def forward(self, query, key, value, mask=None):
+        if mask is not None:
+            mask = mask.unsquezee(1)
+        batch_size = query.size(0)
+
+        # query：(batch_size, seq_len, heads, d_k), key, value same
+        query, key, value = [linear(x).view(batch_size, -1, self.heads, self.d_k) for linear, x in
+                             zip(self.linears, (query, key, value))]
+        x, self.attn = self.attention.attention(query, key, value, mask)
+        x = torch.transpose(x, 1, 2).contiguous().view(batch_size, -1, self.heads * self.d_k)
+        return self.linears[-1](x)
+
+
 if __name__ == '__main__':
-    a = torch.randint(0, 10, size=(3, 4, 5))
-    print(a.size())
-    print(a.T.size())
-    print(torch.transpose(a, -2, -1).size())
-    print(-1e9)
+    a = torch.randint(0, 10, size=(4, 5, 512), dtype=torch.float)
+
+    multi_head = MultiHeadedAttention(heads=8, d_model=512)
+
+    b = multi_head(a, a, a)
+    print(b.size())
