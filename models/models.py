@@ -5,8 +5,10 @@
 import copy
 import math
 
+import numpy as np
 import torch
 from torch import nn
+from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
@@ -39,20 +41,60 @@ class PreTrainModelEncoder(nn.Module):
         return outputs
 
 
-class AbsoluteSinusoidalPositionalEmbedding(object):
-    def __init__(self, d_model, max_len=5000):
-        super(AbsoluteSinusoidalPositionalEmbedding, self).__init__()
+class SinusoidalPositionalEmbedding(object):
+    def __init__(self, d_model, max_len=512):
+        super(SinusoidalPositionalEmbedding, self).__init__()
         self.d_model = d_model
         self.max_len = max_len
 
     def get_embedding(self):
         pe = torch.zeros(size=(self.max_len, self.d_model))
-        position = torch.arange(0, self.max_len)
+        position = torch.arange(0, self.max_len).unsqueeze(1)
         div_term = torch.exp(-torch.arange(0, self.d_model, 2) * (math.log(10000.0) / self.d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)
         return pe
+
+
+class AbsoluteSinusoidalPositionalEncoder(nn.Module):
+    def __init__(self, d_model, max_len=512):
+        super(AbsoluteSinusoidalPositionalEncoder, self).__init__()
+        pe = SinusoidalPositionalEmbedding(d_model, max_len).get_embedding()
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        # x (batch_size, seq_len, embed_size)
+        pe = self.pe.unsqueeze(0)[:, :x.size(1)]
+        x = x + pe
+        return x
+
+
+class RelativeSinusoidalPositionalEncoder(nn.Module):
+    def __init__(self, d_model, max_pos, max_len=512):
+        super(RelativeSinusoidalPositionalEncoder, self).__init__()
+        pe = SinusoidalPositionalEmbedding(d_model, max_len).get_embedding()
+        self.register_buffer('pe', pe)
+        self.max_pos = max_pos
+        self.d_model = d_model
+
+    def get_position_matrix(self, seq_len):
+        positions = np.zeros((seq_len, seq_len, self.d_model))
+        for i in range(seq_len):
+            for j in range(seq_len):
+                if j < i:
+                    positions[i][j] = self.pe[max(0, self.max_pos - (i - j)), :]
+                elif j > i:
+                    positions[i][j] = self.pe[min(2 * self.max_pos, self.max_pos + (j - i)), :]
+                else:
+                    positions[i][j] = self.pe[self.max_pos, :]
+        return positions
+
+    def forward(self, x):
+        batch_size, seq_len = x.size()
+        position_list = np.zeros((batch_size, seq_len, seq_len, self.d_model))
+        for batch_idx in range(batch_size):
+            position_list[batch_idx] = self.get_position_matrix(seq_len)
+        return torch.tensor(position_list)
 
 
 class DotProductAttention(object):
@@ -107,8 +149,13 @@ class MultiHeadedAttention(nn.Module):
 
 if __name__ == '__main__':
     a = torch.randint(0, 10, size=(4, 5, 512), dtype=torch.float)
-
     multi_head = MultiHeadedAttention(heads=8, d_model=512)
-
     b = multi_head(a, a, a)
-    print(b.size())
+    x = torch.randn(size=(3, 6))
+    # pe = AbsoluteSinusoidalPositionalEncoder(8, 100)
+
+    pe = RelativeSinusoidalPositionalEncoder(d_model=100, max_pos=4)
+    # d = pe.get_position_matrix(10)
+    c = pe(x)
+    print(c.size())
+    # print(torch.tensor(d).detach())
