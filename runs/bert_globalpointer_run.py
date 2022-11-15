@@ -43,6 +43,7 @@ def metric(dataloader, model):
                 gold_num += torch.sum(gold_label)
                 predict_num += torch.sum(pred_label)
                 correct_num += torch.sum(pred_label * gold_label)
+            pbar.update()
     print("correct_num: {:3d}, predict_num: {:3d}, gold_num: {:3d}".format(correct_num, predict_num, gold_num))
     precision = correct_num / (predict_num + 1e-10)
     recall = correct_num / (gold_num + 1e-10)
