@@ -74,8 +74,7 @@ def train():
                                    collate_fn=lambda ele: collate_fn(ele, vocab2id, tags))
 
     optimizer = AdamW(model.parameters(), lr=args.lr, correct_bias=False)
-    total_steps = len(train_loader) // args.batch_size * args.epochs
-    total_steps = total_steps if len(train_loader) % args.batch_size == 0 else total_steps + 1
+    total_steps = len(train_loader) * args.epochs
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warm_up_ratio * total_steps,
                                                 num_training_steps=total_steps)
     best_f1_score = 0.0

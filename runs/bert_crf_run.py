@@ -40,22 +40,21 @@ def train():
     num_labels = len(label2id)
     train_data = MsraNerDataset(file_path=os.path.join(args.file_path, 'train.json'), max_len=100)
     valid_data = MsraNerDataset(file_path=os.path.join(args.file_path, 'dev.json'), max_len=100)
-    train_loader = data.DataLoader(train_data, batch_size=16, shuffle=True,
+    train_loader = data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True,
                                    collate_fn=lambda ele: collate_fn(ele, vocab2id, label2id))
-    valid_loader = data.DataLoader(valid_data, batch_size=10,
+    valid_loader = data.DataLoader(valid_data, batch_size=args.batch_size,
                                    collate_fn=lambda ele: collate_fn(ele, vocab2id, label2id))
     bert_model = BertModel.from_pretrained(args.bert_model_path)
     model = Bert_CRF(encoder=bert_model, num_labels=num_labels).to(device)
-    optimizer = AdamW(model.parameters(), lr=2e-5, correct_bias=False)
-    total_steps = len(train_loader) // args.batch_size * args.epochs
-    total_steps = total_steps if len(train_loader) % args.batch_size == 0 else total_steps + 1
+    optimizer = AdamW(model.parameters(), lr=args.lr, correct_bias=False)
+    total_steps = len(train_loader) * args.epochs
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warm_up_ratio * total_steps,
                                                 num_training_steps=total_steps)
     best_f1_score = 0.0
     early_epochs = 0
     for epoch in range(args.epochs):
         model.train()
-        with tqdm(total=len(train_loader), desc='模型训练进度条') as pbar:
+        with tqdm(total=len(train_loader), desc='Epoch：%d，模型训练进度条' % (epoch + 1)) as pbar:
             for batch_idx, batch in enumerate(train_loader):
                 input_ids, token_type_ids, attention_mask, labels, _, _, _ = batch
                 optimizer.zero_grad()
@@ -87,7 +86,9 @@ if __name__ == '__main__':
     parser.add_argument('--bert_model_path', help='中文bert预训练模型路径', type=str, default='/tmp/chinese-roberta-wwm-ext')
     parser.add_argument('--file_path', help='模型训练数据路径', type=str, default='/tmp/')
     parser.add_argument('--epochs', help='模型训练轮数', type=int, default=1)
+    parser.add_argument('--batch_size', help='', type=int, default=32)
     parser.add_argument('--warm_up_ratio', help='模型训练轮数', type=float, default=0.1)
+    parser.add_argument('--lr', help='学习率', type=float, default=2e-5)
     parser.add_argument('--model_path', help='模型存储路径', type=str, default='')
     args = parser.parse_args()
     train()
