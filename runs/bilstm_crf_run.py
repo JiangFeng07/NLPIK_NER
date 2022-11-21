@@ -56,8 +56,6 @@ def train():
     model = BILSTM_CRF(vocab_size=len(vocab2id), embedding_size=args.embedding_size, hidden_size=args.hidden_size,
                        num_layers=args.num_layers, num_classes=len(label2id), dropout=args.dropout).to(device)
 
-    print(model)
-
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     for epoch in range(args.epochs):

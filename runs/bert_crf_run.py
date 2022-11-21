@@ -47,8 +47,10 @@ def train():
     bert_model = BertModel.from_pretrained(args.bert_model_path)
     model = Bert_CRF(encoder=bert_model, num_labels=num_labels).to(device)
     optimizer = AdamW(model.parameters(), lr=2e-5, correct_bias=False)
-    total_steps = len(train_loader) * args.epochs
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
+    total_steps = len(train_loader) // args.batch_size * args.epochs
+    total_steps = total_steps if len(train_loader) % args.batch_size == 0 else total_steps + 1
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warm_up_ratio * total_steps,
+                                                num_training_steps=total_steps)
     best_f1_score = 0.0
     early_epochs = 0
     for epoch in range(args.epochs):
@@ -85,6 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--bert_model_path', help='中文bert预训练模型路径', type=str, default='/tmp/chinese-roberta-wwm-ext')
     parser.add_argument('--file_path', help='模型训练数据路径', type=str, default='/tmp/')
     parser.add_argument('--epochs', help='模型训练轮数', type=int, default=1)
+    parser.add_argument('--warm_up_ratio', help='模型训练轮数', type=float, default=0.1)
     parser.add_argument('--model_path', help='模型存储路径', type=str, default='')
     args = parser.parse_args()
     train()
