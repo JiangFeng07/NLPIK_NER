@@ -68,12 +68,12 @@ def train():
 
     valid_data = MsraNerDataset(file_path=os.path.join(args.file_path, 'dev.json'), max_len=100)
 
-    train_loader = data.DataLoader(train_data, batch_size=16, shuffle=True,
+    train_loader = data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True,
                                    collate_fn=lambda ele: collate_fn(ele, vocab2id, tags))
-    valid_loader = data.DataLoader(valid_data, batch_size=10,
+    valid_loader = data.DataLoader(valid_data, batch_size=args.batch_size,
                                    collate_fn=lambda ele: collate_fn(ele, vocab2id, tags))
 
-    optimizer = AdamW(model.parameters(), lr=2e-5, correct_bias=False)
+    optimizer = AdamW(model.parameters(), lr=args.lr, correct_bias=False)
     total_steps = len(train_loader) // args.batch_size * args.epochs
     total_steps = total_steps if len(train_loader) % args.batch_size == 0 else total_steps + 1
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warm_up_ratio * total_steps,
@@ -121,10 +121,10 @@ if __name__ == '__main__':
     parser.add_argument('--dropout', help='', type=float, default=0.5)
     parser.add_argument('--warm_up_ratio', help='', type=float, default=0.1)
     parser.add_argument('--embedding_size', help='', type=int, default=100)
-    parser.add_argument('--batch_size', help='', type=int, default=100)
+    parser.add_argument('--batch_size', help='', type=int, default=32)
     parser.add_argument('--hidden_size', help='', type=int, default=200)
     parser.add_argument('--num_layers', help='', type=int, default=1)
-    parser.add_argument('--lr', help='学习率', type=float, default=1e-3)
+    parser.add_argument('--lr', help='学习率', type=float, default=2e-5)
     args = parser.parse_args()
 
     train()
