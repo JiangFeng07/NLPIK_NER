@@ -2,6 +2,8 @@
 # -*- coding:utf-8 -*-
 # @Time  : 2022/11/10 17:01
 # @Author: lionel
+import json
+import re
 
 import torch
 from tqdm import tqdm
@@ -142,6 +144,39 @@ def tokenizer(texts, vocab, device):
     return token_ids, token_type_ids, attention_mask
 
 
+def entity_label_encode(chars, entities):
+    """"""
+    tag_list = ['O'] * len(chars)
+    if not entities:
+        return tag_list
+    entity_list = sorted(entities.items(), key=lambda ele: -len(ele[0]))
+    parsed_index = []
+    for entity, tag in entity_list:
+        entity_len = len(entity)
+        i = 0
+        while i < len(chars) - entity_len:
+            if ''.join(chars[i:i + entity_len]) == entity:
+                flag = True
+                for _i in range(i, i + entity_len):
+                    if _i in parsed_index:
+                        flag = False
+                if not flag:
+                    i += 1
+                    break
+                tag_list[i] = 'B-%s' % tag
+                parsed_index.append(i)
+                j = i + 1
+                while j < i + entity_len:
+                    tag_list[j] = 'I-%s' % tag
+                    parsed_index.append(j)
+                    j += 1
+                i += entity_len
+            else:
+                i += 1
+
+    return tag_list
+
+
 def entity_decode(chars, labels, mode='BIO'):
     """
         序列标注实体解析
@@ -218,13 +253,43 @@ def metric(dataloader, model, id2label):
     return precision, recall, f1_score
 
 
+def text_to_chars(text):
+    """文本转化为字符数组"""
+    char_list = []
+    if not text:
+        return char_list
+    text = text.lower()
+    if len(text) == 1:
+        char_list = list(text)
+        return char_list
+    start = 0
+    pattern = re.compile('^[\u4e00-\u9fa5， ,；。;:：]$')
+    while start < len(text) - 1:
+        char = text[start]
+        if pattern.search(char):
+            char_list.append(char)
+            start += 1
+            continue
+        end = start + 1
+        while end < len(text):
+            if not pattern.search(text[end]):
+                end += 1
+                continue
+            break
+        char_list.append(text[start:end])
+        start = end
+    if start == len(text) - 1:
+        char_list.append(text[start])
+    return char_list
+
+
 if __name__ == '__main__':
     chars = ["桐", "乡", "市", "濮", "院", "镇", "凯", "旋", "路", "0", "0", "0", "0", "弄", "0", "单", "元", "电", "联"]
     labels = ["B-district", "I-district", "E-district", "B-town", "I-town", "E-town", "B-road",
               "I-road", "E-road", "B-road", "I-road", "I-road", "I-road", "E-road", "B-cellno", "I-cellno", "E-cellno",
               "O", "O"]
-    entities = entity_decode(chars, labels, mode='BIOES')
-    print(entities)
+    # entities = entity_decode(chars, labels, mode='BIOES')
+    # print(entities)
 
     chars = ['正', '当', '朱', '镕', '基', '当', '选', '政', '府', '总', '理', '后', '第', '一', '次', '在', '中', '外', '记', '者', '招',
              '待', '会', '上', '，', '回', '答', '外', '国', '记', '者', '的', '提', '问', '：', '中', '国', '农', '村', '是', '否', '实',
@@ -239,15 +304,10 @@ if __name__ == '__main__':
               'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O',
               'B-ORG', 'I-ORG', 'I-ORG', 'I-ORG', 'I-ORG', 'O', 'O', 'O', 'B-PER', 'I-PER', 'O', 'O', 'O', 'O', 'O',
               'O', 'O', 'B-LOC', 'I-LOC', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O']
-    entities = entity_decode(chars, labels)
-    print(entities)
+    # entities = entity_decode(chars, labels)
 
-    a = torch.randint(0, 10, size=(3, 4, 5))
-    print(a)
+    chars = ['因', '有', '关', '日', '寇', '在', '京', '掠', '夺', '文', '物', '详', '情', '，', '藏', '界', '较', '为', '重', '视', '，',
+             '也', '是', '我', '们', '收', '藏', '苏', '北', '京', '饭', '店', '史', '料', '中', '的', '要', '件', '之', '一', '。']
+    entities = {'苏北': 'LOC', '北京饭店': 'LOC'}
+    print(entity_label_encode(chars, entities))
 
-    a, b, c = torch.where(1 == a)
-    print(a)
-    print(b)
-    print(c)
-    for ele in a:
-        print(ele)
