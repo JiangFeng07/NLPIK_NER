@@ -153,8 +153,9 @@ def entity_label_encode(chars, entities):
     parsed_index = []
     for entity, tag in entity_list:
         entity_len = len(entity)
+
         i = 0
-        while i < len(chars) - entity_len:
+        while i <= len(chars) - entity_len:
             if ''.join(chars[i:i + entity_len]) == entity:
                 flag = True
                 for _i in range(i, i + entity_len):
@@ -309,5 +310,7 @@ if __name__ == '__main__':
     chars = ['因', '有', '关', '日', '寇', '在', '京', '掠', '夺', '文', '物', '详', '情', '，', '藏', '界', '较', '为', '重', '视', '，',
              '也', '是', '我', '们', '收', '藏', '苏', '北', '京', '饭', '店', '史', '料', '中', '的', '要', '件', '之', '一', '。']
     entities = {'苏北': 'LOC', '北京饭店': 'LOC'}
-    print(entity_label_encode(chars, entities))
 
+    chars = ['曾', '国', '友']
+    entities = {'曾国友': 'PER'}
+    print(entity_label_encode(chars, entities))
