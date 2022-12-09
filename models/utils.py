@@ -2,14 +2,15 @@
 # -*- coding:utf-8 -*-
 # @Time  : 2022/11/10 17:01
 # @Author: lionel
-import json
 import re
+from collections import OrderedDict
 
 import torch
 from tqdm import tqdm
 
 
 # 参考文档 https://wmathor.com/index.php/archives/1537/
+
 
 class FGM(object):
     def __init__(self, model):
@@ -117,7 +118,7 @@ for batch_input, batch_label in data:
 """
 
 
-def tokenizer(texts, vocab, device):
+def tokenizer(texts, vocab, device=torch.device('cpu')):
     """
         bert model input
     :param texts: 文本集合
@@ -125,22 +126,18 @@ def tokenizer(texts, vocab, device):
     :return:
     """
     batch_size = len(texts)
-    seq_len = max([len(text) for text in texts]) + 2
+    seq_len = max([len(text) for text in texts])
 
     token_ids = torch.zeros((batch_size, seq_len), dtype=torch.int, device=device)
     token_type_ids = torch.zeros((batch_size, seq_len), dtype=torch.int, device=device)
     attention_mask = torch.zeros((batch_size, seq_len), dtype=torch.int, device=device)
 
     for index, text in enumerate(texts):
-        token_ids[index][0] = vocab['[CLS]']
-        attention_mask[index][0] = 1
         i = 0
         while i < len(text):
-            token_ids[index][i + 1] = vocab.get(text[i], vocab['[UNK]'])
-            attention_mask[index][i + 1] = 1
+            token_ids[index][i] = vocab.get(text[i], vocab['[UNK]'])
+            attention_mask[index][i] = 1
             i += 1
-        token_ids[index][i + 1] = vocab['[SEP]']
-        attention_mask[index][i + 1] = 1
     return token_ids, token_type_ids, attention_mask
 
 
@@ -284,7 +281,36 @@ def text_to_chars(text):
     return char_list
 
 
+def text_to_chars_by_bertTokenizer(tokenizer, texts):
+    char_list = []
+    vocab2id = tokenizer.vocab
+    id2vocab = {val: key for key, val in vocab2id.items()}
+    encoded_outputs = tokenizer(texts, return_tensors='pt', padding=True, add_special_tokens=False)
+    token_ids, token_type_ids, attention_mask = encoded_outputs['input_ids'], encoded_outputs['token_type_ids'], \
+                                                encoded_outputs['attention_mask']
+
+    for token_id in token_ids:
+        chars = [id2vocab[int(ele)] for ele in token_id]
+        char_list.append(chars)
+    return token_ids, token_type_ids, attention_mask, char_list
+
+
+def build_vocab(vocab_file):
+    """加载字典
+    """
+    vocab2id = OrderedDict()
+    with open(vocab_file, 'r', encoding='utf-8') as f:
+        for line in f:
+            vocab2id[line.strip('\n')] = len(vocab2id)
+    id2vocab = {val: key for key, val in vocab2id.items()}
+    return vocab2id, id2vocab
+
+
 if __name__ == '__main__':
+    bert_model_path = '/tmp/chinese-roberta-wwm-ext'
+    labels = ['人名开始', '人名中间', '公司名开始', '公司名中间', '其它']
+    texts = ['李四是华为信息科技有限公司的员工', '张三曾在美团点评任职']
+
     chars = ["桐", "乡", "市", "濮", "院", "镇", "凯", "旋", "路", "0", "0", "0", "0", "弄", "0", "单", "元", "电", "联"]
     labels = ["B-district", "I-district", "E-district", "B-town", "I-town", "E-town", "B-road",
               "I-road", "E-road", "B-road", "I-road", "I-road", "I-road", "E-road", "B-cellno", "I-cellno", "E-cellno",
@@ -307,10 +333,7 @@ if __name__ == '__main__':
               'O', 'O', 'B-LOC', 'I-LOC', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O']
     # entities = entity_decode(chars, labels)
 
-    chars = ['因', '有', '关', '日', '寇', '在', '京', '掠', '夺', '文', '物', '详', '情', '，', '藏', '界', '较', '为', '重', '视', '，',
-             '也', '是', '我', '们', '收', '藏', '苏', '北', '京', '饭', '店', '史', '料', '中', '的', '要', '件', '之', '一', '。']
-    entities = {'苏北': 'LOC', '北京饭店': 'LOC'}
-
-    chars = ['曾', '国', '友']
-    entities = {'曾国友': 'PER'}
-    print(entity_label_encode(chars, entities))
+    # chars = ['因', '有', '关', '日', '寇', '在', '京', '掠', '夺', '文', '物', '详', '情', '，', '藏', '界', '较', '为', '重', '视', '，',
+    #          '也', '是', '我', '们', '收', '藏', '苏', '北', '京', '饭', '店', '史', '料', '中', '的', '要', '件', '之', '一', '。']
+    # entities = {'苏北': 'LOC', '北京饭店': 'LOC'}
+    # print(entity_label_encode(chars, entities))

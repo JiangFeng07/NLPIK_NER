@@ -12,9 +12,8 @@ from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, BertModel
 
 from datas.msra import MsraNerDataset
-from datas.utils import build_vocab
 from models.bert_crf import Bert_CRF
-from models.utils import tokenizer, metric
+from models.utils import tokenizer, metric, build_vocab
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
