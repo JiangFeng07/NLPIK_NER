@@ -9,11 +9,10 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils import data
 from tqdm import tqdm
 from datas.msra import MsraNerDataset
-from datas.utils import build_vocab
 from models.bilstm_crf import BILSTM_CRF
 import torch
 
-from models.utils import metric
+from models.utils import metric, build_vocab
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
