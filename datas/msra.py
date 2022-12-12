@@ -4,6 +4,7 @@
 # @Author: lionel
 import json
 from torch.utils import data
+import pandas as pd
 
 
 class MsraNerDataset(data.Dataset):
@@ -19,13 +20,13 @@ class MsraNerDataset(data.Dataset):
         if isinstance(self.data[item], dict):
             chars = self.data[item].get('chars')
             labels = self.data[item].get('labels')
-            char_len = len(chars)
+            char_lens = len(chars)
             if len(chars) > self.max_len:
                 chars = chars[:self.max_len]
                 labels = labels[:self.max_len]
-                char_len = len(chars)
+                char_lens = len(chars)
 
-            return chars, labels, char_len
+            return chars, labels, char_lens
 
     def __len__(self):
         return len(self.data)

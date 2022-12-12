@@ -126,18 +126,22 @@ def tokenizer(texts, vocab, device=torch.device('cpu')):
     :return:
     """
     batch_size = len(texts)
-    seq_len = max([len(text) for text in texts])
+    seq_len = max([len(text) for text in texts]) + 2
 
     token_ids = torch.zeros((batch_size, seq_len), dtype=torch.int, device=device)
     token_type_ids = torch.zeros((batch_size, seq_len), dtype=torch.int, device=device)
     attention_mask = torch.zeros((batch_size, seq_len), dtype=torch.int, device=device)
 
     for index, text in enumerate(texts):
+        token_ids[index][0] = vocab['[CLS]']
+        attention_mask[index][0] = 1
         i = 0
         while i < len(text):
-            token_ids[index][i] = vocab.get(text[i], vocab['[UNK]'])
-            attention_mask[index][i] = 1
+            token_ids[index][i + 1] = vocab.get(text[i], vocab['[UNK]'])
+            attention_mask[index][i + 1] = 1
             i += 1
+        token_ids[index][i + 1] = vocab['[SEP]']
+        attention_mask[index][i + 1] = 1
     return token_ids, token_type_ids, attention_mask
 
 
