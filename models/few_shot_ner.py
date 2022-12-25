@@ -4,42 +4,44 @@
 # @Author: lionel
 import torch
 from torch import nn
-from transformers import BertTokenizer, BertModel
+from transformers import BertModel
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class LabelSemanticsFSNER(nn.Module):
-    def __init__(self, label_encoder, token_encoder, label_ids, label_attention_mask):
+    def __init__(self, base_model_path, tokenizer, tag2id, label_context):
         super(LabelSemanticsFSNER, self).__init__()
-        self.label_encoder = label_encoder
-        self.token_encoder = token_encoder
+        self.label_encoder = BertModel.from_pretrained(base_model_path).to(device)
+        self.token_encoder = BertModel.from_pretrained(base_model_path).to(device)
+        self.tag2id = tag2id
+        self.index_context = {'B': '开始词', 'I': '中间词'}
+        self.label_context = label_context
+        self.tokenizer = tokenizer
 
-        # (num_label, hidden_size)
-        self.label_cls_output = self.label_encoder(label_ids, label_attention_mask)[0][:, 0, :]
+    def build_label_representation(self, tag2id):
+        labels = []
+        for k, v in tag2id.items():
+            if k != 'O':
+                idx, label = k.split('-')
+                label = self.label_context[label]
+                labels.append(label + self.index_context[idx])
+            else:
+                labels.append('其它类别词')
+        inputs_ids = self.tokenizer(labels)
+        label_embeddings = self.label_encoder(inputs_ids=inputs_ids['input_ids'].to(device),
+                                              token_type_ids=inputs_ids['token_type_ids'].to(device),
+                                              attention_mask=inputs_ids['attention_mask'].to(device)).pooler_output
+        return label_embeddings
 
-    def forward(self, token_ids, token_attention_mask):
-        token_outputs = self.token_encoder(token_ids, token_attention_mask)[0]  # (batch_size, seq_len, hidden_size)
-        # label_outputs = self.label_encoder(label_ids, label_attention_mask)[0]
-        # label_cls_output = label_outputs[:, 0, :]  # (num_label, hidden_size)
-        logits = torch.matmul(token_outputs, torch.transpose(self.label_cls_output, 1, 0))
-        return torch.nn.Softmax(dim=2)(logits)
-
-
-if __name__ == '__main__':
-    bert_model_path = '/tmp/chinese-roberta-wwm-ext'
-    bert_model = BertModel.from_pretrained(bert_model_path)
-    labels = ['人名开始', '人名中间', '公司名开始', '公司名中间', '其它']
-    texts = ['李四是华为信息科技有限公司的员工', '张三曾在美团点评任职']
-    tokenizer = BertTokenizer.from_pretrained(bert_model_path)
-
-    vocab2id = tokenizer.vocab
-    id2vocab = {val: key for key, val in vocab2id.items()}
-    encoded_outputs = tokenizer(texts, return_tensors='pt', padding=True)
-
-    token_ids, token_attention_mask = encoded_outputs['input_ids'], encoded_outputs['attention_mask']
-
-    label_outputs = tokenizer(labels, return_tensors='pt', padding=True)
-    label_ids, label_attention_mask = label_outputs['input_ids'], label_outputs['attention_mask']
-    fs_ner = LabelSemanticsFSNER(bert_model, bert_model, label_ids, label_attention_mask)
-    print(fs_ner)
-    logits = fs_ner(token_ids, token_attention_mask)
-    print(logits.size())
+    def forward(self, token_ids, attention_mask):
+        self.label_representation = self.build_label_representation(self.tag2id).to(device).detach()
+        tag_lens, hidden_size = self.label_representation.size()
+        token_outputs = self.token_encoder(token_ids,
+                                           attention_mask).last_hidden_state  # (batch_size, seq_len, hidden_size)
+        batch_size = token_outputs.size(0)
+        label_embeddings = self.label_representation.expand(batch_size, tag_lens, hidden_size)
+        logits = torch.matmul(token_outputs, torch.transpose(label_embeddings, 2, 1))
+        softmax_embeddings = torch.nn.Softmax(dim=2)(logits)
+        label_indexs = torch.argmax(softmax_embeddings, dim=-1)
+        return logits, label_indexs
